@@ -80,8 +80,8 @@ func WriteJson(buf JsonStringWriter, s []byte) {
 				// can lead to security holes when user-controlled strings
 				// are rendered into JSON and served to some browsers.
 				buf.WriteString(`\u00`)
-				//buf.WriteByte(hex[b>>4])
-				//buf.WriteByte(hex[b&0xF])
+				buf.WriteByte(hex[b>>4])
+				buf.WriteByte(hex[b&0xF])
 			}
 			i++
 			start = i
@@ -313,9 +313,9 @@ var lt [256]bool = [256]bool{
 	true,  /* 57 */
 	true,  /* 58 */
 	true,  /* 59 */
-	false, /* 60 */
+	true,  /* 60 */
 	true,  /* 61 */
-	false, /* 62 */
+	true,  /* 62 */
 	true,  /* 63 */
 	true,  /* 64 */
 	true,  /* 65 */
