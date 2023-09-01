@@ -32,7 +32,7 @@ var bufferPool = sync.Pool{}
 func acquireBuffer() []byte {
 	v := bufferPool.Get()
 	if v == nil {
-		return make([]byte, 512)
+		return make([]byte, 64)
 	}
 	return v.([]byte)
 }
