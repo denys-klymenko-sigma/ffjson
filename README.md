@@ -124,7 +124,7 @@ That said, ffjson operates deterministically, so it will generate the same code 
 This is probably the easiest optimization for you. Instead of going through encoding/json, you can call ffjson. This will disable the checks that encoding/json does to the json when it receives it from struct functions.
 
 ```Go
-	import "github.com/pquerna/ffjson/ffjson"
+	import "github.com/denys-klymenko-sigma/ffjson/ffjson"
 
 	// BEFORE:
 	buf, err := json.Marshal(&item)
@@ -143,7 +143,7 @@ This simple change is likely to double the speed of your encoding/decoding.
 
 On servers where you have a lot of concurrent encoding going on, you can hand back the byte buffer you get from json.Marshal once you are done using it. An example could look like this:
 ```Go
-import "github.com/pquerna/ffjson/ffjson"
+import "github.com/denys-klymenko-sigma/ffjson/ffjson"
 
 func Encode(item interface{}, out io.Writer) {
 	// Encode
@@ -168,7 +168,7 @@ There might be cases where you need to encode many objects at once. This could b
 
 To do this, there is an interface similar to `encoding/json`, that allow you to create a re-usable encoder. Here is an example where we want to encode an array of the `Item` type, with a comma between entries:
 ```Go
-import "github.com/pquerna/ffjson/ffjson"
+import "github.com/denys-klymenko-sigma/ffjson/ffjson"
 
 func EncodeItems(items []Item, out io.Writer) {
         // We create an encoder.
@@ -230,4 +230,3 @@ Please [open issues in Github](https://github.com/pquerna/ffjson/issues) for ide
 ## License
 
 `ffjson` is licensed under the [Apache License, Version 2.0](./LICENSE)
-

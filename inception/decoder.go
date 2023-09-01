@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/pquerna/ffjson/shared"
+	"github.com/denys-klymenko-sigma/ffjson/shared"
 )
 
 var validValues []string = []string{
@@ -37,7 +37,7 @@ var validValues []string = []string{
 
 func CreateUnmarshalJSON(ic *Inception, si *StructInfo) error {
 	out := ""
-	ic.OutputImports[`fflib "github.com/pquerna/ffjson/fflib/v1"`] = true
+	ic.OutputImports[`fflib "github.com/denys-klymenko-sigma/ffjson/fflib/v1"`] = true
 	if len(si.Fields) > 0 {
 		ic.OutputImports[`"bytes"`] = true
 	}

@@ -29,7 +29,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/pquerna/ffjson/shared"
+	"github.com/denys-klymenko-sigma/ffjson/shared"
 )
 
 const inceptionMainTemplate = `
@@ -40,7 +40,7 @@ const inceptionMainTemplate = `
 package main
 
 import (
-	"github.com/pquerna/ffjson/inception"
+	"github.com/denys-klymenko-sigma/ffjson/inception"
 	importedinceptionpackage "{{.ImportName}}"
 )
 
@@ -60,7 +60,7 @@ const ffjsonExposeTemplate = `
 package {{.PackageName}}
 
 import (
-	ffjsonshared "github.com/pquerna/ffjson/shared"
+	ffjsonshared "github.com/denys-klymenko-sigma/ffjson/shared"
 )
 
 func FFJSONExpose() []ffjsonshared.InceptionType {

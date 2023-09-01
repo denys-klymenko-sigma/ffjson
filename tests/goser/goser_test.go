@@ -20,10 +20,11 @@ package goser
 import (
 	"encoding/json"
 	"fmt"
-	base "github.com/pquerna/ffjson/tests/goser/base"
-	ff "github.com/pquerna/ffjson/tests/goser/ff"
 	"reflect"
 	"testing"
+
+	base "github.com/denys-klymenko-sigma/ffjson/tests/goser/base"
+	ff "github.com/denys-klymenko-sigma/ffjson/tests/goser/ff"
 )
 
 func TestRoundTrip(t *testing.T) {

@@ -20,13 +20,14 @@ package generator
 import (
 	"flag"
 	"fmt"
-	"github.com/pquerna/ffjson/shared"
 	"go/ast"
 	"go/doc"
 	"go/parser"
 	"go/token"
 	"regexp"
 	"strings"
+
+	"github.com/denys-klymenko-sigma/ffjson/shared"
 )
 
 var noEncoder = flag.Bool("noencoder", false, "Do not generate encoder functions")

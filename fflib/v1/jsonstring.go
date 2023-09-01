@@ -24,10 +24,10 @@ package v1
 
 import (
 	"io"
-	"unicode/utf8"
 	"strconv"
-	"unicode/utf16"
 	"unicode"
+	"unicode/utf16"
+	"unicode/utf8"
 )
 
 const hex = "0123456789abcdef"
@@ -80,8 +80,8 @@ func WriteJson(buf JsonStringWriter, s []byte) {
 				// can lead to security holes when user-controlled strings
 				// are rendered into JSON and served to some browsers.
 				buf.WriteString(`\u00`)
-				buf.WriteByte(hex[b>>4])
-				buf.WriteByte(hex[b&0xF])
+				//buf.WriteByte(hex[b>>4])
+				//buf.WriteByte(hex[b&0xF])
 			}
 			i++
 			start = i
