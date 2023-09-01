@@ -291,7 +291,7 @@ var lt [256]bool = [256]bool{
 	true,  /* 35 */
 	true,  /* 36 */
 	true,  /* 37 */
-	false, /* 38 */
+	true,  /* 38 */
 	true,  /* 39 */
 	true,  /* 40 */
 	true,  /* 41 */
