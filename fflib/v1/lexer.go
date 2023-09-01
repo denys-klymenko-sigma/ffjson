@@ -107,7 +107,7 @@ type FFLexer struct {
 	buf             Buffer
 }
 
-func NewFFLexer(input []byte) *FFLexer {
+func NewFFLexer(input io.Reader) *FFLexer {
 	fl := &FFLexer{
 		Token:  FFTok_init,
 		Error:  FFErr_e_ok,
@@ -127,13 +127,17 @@ type LexerError struct {
 }
 
 // Reset the Lexer and add new input.
-func (ffl *FFLexer) Reset(input []byte) {
+func (ffl *FFLexer) Reset(input io.Reader) {
 	ffl.Token = FFTok_init
 	ffl.Error = FFErr_e_ok
 	ffl.BigError = nil
 	ffl.reader.Reset(input)
 	ffl.lastCurrentChar = 0
 	ffl.Output.Reset()
+}
+
+func (ffl *FFLexer) Release() {
+	ffl.reader.Release()
 }
 
 func (le *LexerError) Error() string {
@@ -172,7 +176,6 @@ func (ffl *FFLexer) scanReadByte() (byte, error) {
 }
 
 func (ffl *FFLexer) readByte() (byte, error) {
-
 	c, err := ffl.reader.ReadByte()
 	if err != nil {
 		ffl.Error = FFErr_io
@@ -462,9 +465,23 @@ func (ffl *FFLexer) Scan() FFTok {
 			goto lexed
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			ffl.unreadByte()
+			err := ffl.reader.LoadMore()
+			if err != nil {
+				ffl.Error = FFErr_io
+				ffl.BigError = err
+				return FFTok_error
+			}
+
 			tok = ffl.lexNumber()
 			goto lexed
 		case '/':
+			err := ffl.reader.LoadMore()
+			if err != nil {
+				ffl.Error = FFErr_io
+				ffl.BigError = err
+				return FFTok_error
+			}
+
 			tok = ffl.lexComment()
 			goto lexed
 		default:

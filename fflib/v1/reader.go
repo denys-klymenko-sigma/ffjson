@@ -20,39 +20,65 @@ package v1
 import (
 	"fmt"
 	"io"
+	"sync"
 	"unicode"
 	"unicode/utf16"
 )
 
 const sliceStringMask = cIJC | cNFP
 
-type ffReader struct {
-	s []byte
-	i int
-	l int
+var bufferPool = sync.Pool{}
+
+func acquireBuffer() []byte {
+	v := bufferPool.Get()
+	if v == nil {
+		return make([]byte, 512)
+	}
+	return v.([]byte)
 }
 
-func newffReader(d []byte) *ffReader {
+func releaseBuffer(buffer []byte) {
+	clear(buffer)
+	//nolint:staticcheck
+	bufferPool.Put(buffer[:0])
+}
+
+type ffReader struct {
+	buffer []byte
+	reader io.Reader
+	head   int
+	tail   int
+}
+
+func newffReader(input io.Reader) *ffReader {
 	return &ffReader{
-		s: d,
-		i: 0,
-		l: len(d),
+		buffer: acquireBuffer(),
+		head:   0,
+		reader: input,
+		tail:   0,
 	}
 }
 
+func (r *ffReader) Release() {
+	releaseBuffer(r.buffer)
+	r.buffer = nil
+	r.reader = nil
+}
+
 func (r *ffReader) Slice(start, stop int) []byte {
-	return r.s[start:stop]
+	return r.buffer[start:stop]
 }
 
 func (r *ffReader) Pos() int {
-	return r.i
+	return r.head
 }
 
 // Reset the reader, and add new input.
-func (r *ffReader) Reset(d []byte) {
-	r.s = d
-	r.i = 0
-	r.l = len(d)
+func (r *ffReader) Reset(d io.Reader) {
+	r.buffer = r.buffer[:0]
+	r.head = 0
+	r.reader = d
+	r.tail = 0
 }
 
 // Calculates the Position with line and line offset,
@@ -63,8 +89,8 @@ func (r *ffReader) PosWithLine() (int, int) {
 	currentLine := 1
 	currentChar := 0
 
-	for i := 0; i < r.i; i++ {
-		c := r.s[i]
+	for i := 0; i < r.head; i++ {
+		c := r.buffer[i]
 		currentChar++
 		if c == '\n' {
 			currentLine++
@@ -75,15 +101,40 @@ func (r *ffReader) PosWithLine() (int, int) {
 	return currentLine, currentChar
 }
 
+func (r *ffReader) LoadMore() error {
+	if r.head > 0 {
+		// copy unread data to beginning of buffer.
+		copy(r.buffer, r.buffer[r.head:r.tail])
+		r.tail -= r.head
+		r.head = 0
+	}
+
+	n, err := r.reader.Read(r.buffer[r.tail:])
+	if n == 0 && err != nil {
+		if err != io.EOF {
+			return err
+		}
+	}
+
+	r.tail += n
+
+	return nil
+}
+
 func (r *ffReader) ReadByteNoWS() (byte, error) {
-	if r.i >= r.l {
+	err := r.LoadMore()
+	if err != nil {
+		return 0, err
+	}
+
+	if r.head >= r.tail {
 		return 0, io.EOF
 	}
 
-	j := r.i
+	j := r.head
 
 	for {
-		c := r.s[j]
+		c := r.buffer[j]
 		j++
 
 		// inline whitespace parsing gives another ~8% performance boost
@@ -101,31 +152,31 @@ func (r *ffReader) ReadByteNoWS() (byte, error) {
 			}
 		*/
 		if whitespaceLookupTable[c] == false {
-			r.i = j
+			r.head = j
 			return c, nil
 		}
 
-		if j >= r.l {
+		if j >= r.tail {
 			return 0, io.EOF
 		}
 	}
 }
 
 func (r *ffReader) ReadByte() (byte, error) {
-	if r.i >= r.l {
+	if r.head >= r.tail {
 		return 0, io.EOF
 	}
 
-	r.i++
+	r.head++
 
-	return r.s[r.i-1], nil
+	return r.buffer[r.head-1], nil
 }
 
 func (r *ffReader) UnreadByte() error {
-	if r.i <= 0 {
+	if r.head <= 0 {
 		panic("ffReader.UnreadByte: at beginning of slice")
 	}
-	r.i--
+	r.head--
 	return nil
 }
 
@@ -133,10 +184,10 @@ func (r *ffReader) readU4(j int) (rune, error) {
 
 	var u4 [4]byte
 	for i := 0; i < 4; i++ {
-		if j >= r.l {
+		if j >= r.tail {
 			return -1, io.EOF
 		}
-		c := r.s[j]
+		c := r.buffer[j]
 		if byteLookupTable[c]&cVHC != 0 {
 			u4[i] = c
 			j++
@@ -156,11 +207,11 @@ func (r *ffReader) readU4(j int) (rune, error) {
 }
 
 func (r *ffReader) handleEscaped(c byte, j int, out DecodingBuffer) (int, error) {
-	if j >= r.l {
+	if j >= r.tail {
 		return 0, io.EOF
 	}
 
-	c = r.s[j]
+	c = r.buffer[j]
 	j++
 
 	if c == 'u' {
@@ -174,9 +225,9 @@ func (r *ffReader) handleEscaped(c byte, j int, out DecodingBuffer) (int, error)
 			if err != nil {
 				return 0, err
 			}
-			out.Write(r.s[r.i : j-2])
-			r.i = j + 10
-			j = r.i
+			out.Write(r.buffer[r.head : j-2])
+			r.head = j + 10
+			j = r.head
 			rval := utf16.DecodeRune(ru, ru2)
 			if rval != unicode.ReplacementChar {
 				out.WriteRune(rval)
@@ -184,18 +235,18 @@ func (r *ffReader) handleEscaped(c byte, j int, out DecodingBuffer) (int, error)
 				return 0, fmt.Errorf("lex_string_invalid_unicode_surrogate: %v %v", ru, ru2)
 			}
 		} else {
-			out.Write(r.s[r.i : j-2])
-			r.i = j + 4
-			j = r.i
+			out.Write(r.buffer[r.head : j-2])
+			r.head = j + 4
+			j = r.head
 			out.WriteRune(ru)
 		}
 		return j, nil
 	} else if byteLookupTable[c]&cVEC == 0 {
 		return 0, fmt.Errorf("lex_string_invalid_escaped_char: %v", c)
 	} else {
-		out.Write(r.s[r.i : j-2])
-		r.i = j
-		j = r.i
+		out.Write(r.buffer[r.head : j-2])
+		r.head = j
+		j = r.head
 
 		switch c {
 		case '"':
@@ -221,24 +272,38 @@ func (r *ffReader) handleEscaped(c byte, j int, out DecodingBuffer) (int, error)
 }
 
 func (r *ffReader) SliceString(out DecodingBuffer) error {
-	var c byte
 	// TODO(pquerna): string_with_escapes? de-escape here?
-	j := r.i
+	j := r.head
 
 	for {
-		if j >= r.l {
+		if j >= r.tail {
 			return io.EOF
 		}
 
-		j, c = scanString(r.s, j)
+		for {
+			if j >= r.tail {
+				err := r.LoadMore()
+				if err != nil {
+					return err
+				}
 
-		if c == '"' {
-			if j != r.i {
-				out.Write(r.s[r.i : j-1])
-				r.i = j
+				j = r.head
 			}
-			return nil
-		} else if c == '\\' {
+
+			c := r.buffer[j]
+			if c == '"' || byteLookupTable[c]&sliceStringMask != 0 {
+				j++
+				break
+			}
+			out.Write(r.buffer[j : j+1])
+			j++
+
+		}
+
+		r.head = j
+
+		return nil
+		/*else if c == '\\' { // TODO handle escaped and utf16
 			var err error
 			j, err = r.handleEscaped(c, j, out)
 			if err != nil {
@@ -246,7 +311,7 @@ func (r *ffReader) SliceString(out DecodingBuffer) error {
 			}
 		} else if byteLookupTable[c]&cIJC != 0 {
 			return fmt.Errorf("lex_string_invalid_json_char: %v", c)
-		}
+		}*/
 		continue
 	}
 }

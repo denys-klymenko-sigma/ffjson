@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"reflect"
 
 	fflib "github.com/denys-klymenko-sigma/ffjson/fflib/v1"
@@ -39,7 +38,7 @@ func NewDecoder() *Decoder {
 }
 
 // Decode the data in the supplied data slice.
-func (d *Decoder) Decode(data []byte, v interface{}) error {
+func (d *Decoder) Decode(data io.Reader, v interface{}) error {
 	f, ok := v.(unmarshalFaster)
 	if ok {
 		if d.fs == nil {
@@ -50,28 +49,8 @@ func (d *Decoder) Decode(data []byte, v interface{}) error {
 		return f.UnmarshalJSONFFLexer(d.fs, fflib.FFParse_map_start)
 	}
 
-	um, ok := v.(json.Unmarshaler)
-	if ok {
-		return um.UnmarshalJSON(data)
-	}
-	return json.Unmarshal(data, v)
-}
-
-// Decode the data from the supplied reader.
-// You should expect that data is read into memory before it is decoded.
-func (d *Decoder) DecodeReader(r io.Reader, v interface{}) error {
-	_, ok := v.(unmarshalFaster)
-	_, ok2 := v.(json.Unmarshaler)
-	if ok || ok2 {
-		data, err := ioutil.ReadAll(r)
-		if err != nil {
-			return err
-		}
-		defer fflib.Pool(data)
-		return d.Decode(data, v)
-	}
-	dec := json.NewDecoder(r)
-	return dec.Decode(v)
+	decoder := json.NewDecoder(data)
+	return decoder.Decode(v)
 }
 
 // DecodeFast will unmarshal the data if fast unmarshal is available.
@@ -79,7 +58,7 @@ func (d *Decoder) DecodeReader(r io.Reader, v interface{}) error {
 // unmarshal is used or in testing.
 // If you would like to have fallback to encoding/json you can use the
 // regular Decode() method.
-func (d *Decoder) DecodeFast(data []byte, v interface{}) error {
+func (d *Decoder) DecodeFast(data io.Reader, v interface{}) error {
 	f, ok := v.(unmarshalFaster)
 	if !ok {
 		return errors.New("ffjson unmarshal not available for type " + reflect.TypeOf(v).String())

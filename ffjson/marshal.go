@@ -20,6 +20,7 @@ package ffjson
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"reflect"
 
 	fflib "github.com/denys-klymenko-sigma/ffjson/fflib/v1"
@@ -82,18 +83,17 @@ func MarshalFast(v interface{}) ([]byte, error) {
 // however this should still provide a speedup for your encoding.
 // It is ok to call this function even if no ffjson code has been
 // generated for the data type you pass in the interface.
-func Unmarshal(data []byte, v interface{}) error {
+func Unmarshal(data io.Reader, v interface{}) error {
 	f, ok := v.(unmarshalFaster)
 	if ok {
 		fs := fflib.NewFFLexer(data)
+		defer fs.Release()
+
 		return f.UnmarshalJSONFFLexer(fs, fflib.FFParse_map_start)
 	}
 
-	j, ok := v.(json.Unmarshaler)
-	if ok {
-		return j.UnmarshalJSON(data)
-	}
-	return json.Unmarshal(data, v)
+	decoder := json.NewDecoder(data)
+	return decoder.Decode(v)
 }
 
 // UnmarshalFast will unmarshal the data if fast marshall is available.
@@ -101,7 +101,7 @@ func Unmarshal(data []byte, v interface{}) error {
 // unmarshal is used or in testing.
 // If you would like to have fallback to encoding/json you can use the
 // Unmarshal() method.
-func UnmarshalFast(data []byte, v interface{}) error {
+func UnmarshalFast(data io.Reader, v interface{}) error {
 	_, ok := v.(unmarshalFaster)
 	if !ok {
 		return errors.New("ffjson unmarshal not available for type " + reflect.TypeOf(v).String())

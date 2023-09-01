@@ -18,9 +18,11 @@
 package goser
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 
+	"github.com/denys-klymenko-sigma/ffjson/ffjson"
 	base "github.com/denys-klymenko-sigma/ffjson/tests/go.stripe/base"
 	ff "github.com/denys-klymenko-sigma/ffjson/tests/go.stripe/ff"
 )
@@ -29,12 +31,12 @@ func TestRoundTrip(t *testing.T) {
 	var customerTripped ff.Customer
 	customer := ff.NewCustomer()
 
-	buf1, err := json.Marshal(&customer)
+	buf1, err := ffjson.Marshal(&customer)
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
 	}
 
-	err = json.Unmarshal(buf1, &customerTripped)
+	err = ffjson.Unmarshal(bytes.NewReader(buf1), &customerTripped)
 	if err != nil {
 		print(string(buf1))
 		t.Fatalf("Unmarshal: %v", err)
@@ -90,30 +92,32 @@ func getBaseData(b fatalF) []byte {
 	return buf
 }
 
-func BenchmarkUnmarshalJSON(b *testing.B) {
-	rec := base.Customer{}
-	buf := getBaseData(b)
-	b.SetBytes(int64(len(buf)))
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err := json.Unmarshal(buf, &rec)
-		if err != nil {
-			b.Fatalf("Marshal: %v", err)
-		}
-	}
-}
-
 func BenchmarkFFUnmarshalJSON(b *testing.B) {
-	rec := ff.Customer{}
-	buf := getBaseData(b)
-	b.SetBytes(int64(len(buf)))
+	b.Run("json", func(b *testing.B) {
+		rec := base.Customer{}
+		buf := getBaseData(b)
+		b.SetBytes(int64(len(buf)))
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err := rec.UnmarshalJSON(buf)
-		if err != nil {
-			b.Fatalf("UnmarshalJSON: %v", err)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			err := json.Unmarshal(buf, &rec)
+			if err != nil {
+				b.Fatalf("Marshal: %v", err)
+			}
 		}
-	}
+	})
+
+	b.Run("ffjson", func(b *testing.B) {
+		rec := ff.Customer{}
+		buf := getBaseData(b)
+		b.SetBytes(int64(len(buf)))
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			err := rec.UnmarshalJSON(bytes.NewReader(buf))
+			if err != nil {
+				b.Fatalf("UnmarshalJSON: %v", err)
+			}
+		}
+	})
 }

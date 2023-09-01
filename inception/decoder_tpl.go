@@ -530,7 +530,7 @@ var ujFuncTxt = `
 {{$ic := .IC}}
 
 // UnmarshalJSON umarshall json - template of ffjson
-func (j *{{.SI.Name}}) UnmarshalJSON(input []byte) error {
+func (j *{{.SI.Name}}) UnmarshalJSON(input io.Reader) error {
     fs := fflib.NewFFLexer(input)
     return j.UnmarshalJSONFFLexer(fs, fflib.FFParse_map_start)
 }

@@ -15,7 +15,7 @@ When you change your `struct`, you will need to run `ffjson` again (or make it p
 
 If `myfile.go` contains the `struct` types you would like to be faster, and assuming `GOPATH` is set to a reasonable value for an existing project (meaning that in this particular example if `myfile.go` is in the `myproject` directory, the project should be under `$GOPATH/src/myproject`), you can just run:
 
-    go get -u github.com/pquerna/ffjson
+    go get -u github.com/denys-klymenko-sigma/ffjson
     ffjson myfile.go
     git add myfile_ffjson.go
 
@@ -29,7 +29,7 @@ If `myfile.go` contains the `struct` types you would like to be faster, and assu
 
 * **Unmarshal Support:** Since v0.9, `ffjson` supports Unmarshaling of structures.
 * **Drop in Replacement:** Because `ffjson` implements the interfaces already defined by `encoding/json` the performance enhancements are transparent to users of your structures.
-* **Supports all types:** `ffjson` has native support for most of Go's types -- for any type it doesn't support with fast paths, it falls back to using `encoding/json`.  This means all structures should work out of the box. If they don't, [open a issue!](https://github.com/pquerna/ffjson/issues)
+* **Supports all types:** `ffjson` has native support for most of Go's types -- for any type it doesn't support with fast paths, it falls back to using `encoding/json`.  This means all structures should work out of the box. If they don't, [open a issue!](https://github.com/denys-klymenko-sigma/ffjson/issues)
 * **ffjson: skip**: If you have a structure you want `ffjson` to ignore, add `ffjson: skip` to the doc string for this structure.
 * **Extensive Tests:** `ffjson` contains an extensive test suite including fuzz'ing against the JSON parser.
 
@@ -136,8 +136,8 @@ This simple change is likely to double the speed of your encoding/decoding.
 
 
 [![GoDoc][1]][2]
-[1]: https://godoc.org/github.com/pquerna/ffjson/ffjson?status.svg
-[2]: https://godoc.org/github.com/pquerna/ffjson/ffjson#Marshal
+[1]: https://godoc.org/github.com/denys-klymenko-sigma/ffjson/ffjson?status.svg
+[2]: https://godoc.org/github.com/denys-klymenko-sigma/ffjson/ffjson#Marshal
 
 ### Tip 2: Pooling the buffer
 
@@ -159,8 +159,8 @@ func Encode(item interface{}, out io.Writer) {
 Note that the buffers you put back in the pool can still be reclaimed by the garbage collector, so you wont risk your program building up a big memory use by pooling the buffers.
 
 [![GoDoc][1]][2]
-[1]: https://godoc.org/github.com/pquerna/ffjson/ffjson?status.svg
-[2]: https://godoc.org/github.com/pquerna/ffjson/ffjson#Pool
+[1]: https://godoc.org/github.com/denys-klymenko-sigma/ffjson/ffjson?status.svg
+[2]: https://godoc.org/github.com/denys-klymenko-sigma/ffjson/ffjson#Pool
 
 ### Tip 3: Creating an Encoder
 
@@ -188,8 +188,8 @@ func EncodeItems(items []Item, out io.Writer) {
 
 
 Documentation: [![GoDoc][1]][2]
-[1]: https://godoc.org/github.com/pquerna/ffjson/ffjson?status.svg
-[2]: https://godoc.org/github.com/pquerna/ffjson/ffjson#Encoder
+[1]: https://godoc.org/github.com/denys-klymenko-sigma/ffjson/ffjson?status.svg
+[2]: https://godoc.org/github.com/denys-klymenko-sigma/ffjson/ffjson#Encoder
 
 ## Tip 4: Avoid interfaces
 
@@ -212,7 +212,7 @@ You should also make sure that code is generated for `Bar` if it is placed in an
 
 ## Improvements, bugs, adding features, and taking ffjson new directions!
 
-Please [open issues in Github](https://github.com/pquerna/ffjson/issues) for ideas, bugs, and general thoughts.  Pull requests are of course preferred :)
+Please [open issues in Github](https://github.com/denys-klymenko-sigma/ffjson/issues) for ideas, bugs, and general thoughts.  Pull requests are of course preferred :)
 
 ## Similar projects
 
