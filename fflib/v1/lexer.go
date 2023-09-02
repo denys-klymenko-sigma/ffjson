@@ -115,7 +115,7 @@ func NewFFLexer(input io.Reader) *FFLexer {
 		Output: &Buffer{},
 	}
 	// TODO: guess size?
-	//fl.Output.Grow(64)
+	//fl.Output.Grow(128)
 	return fl
 }
 

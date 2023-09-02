@@ -32,7 +32,7 @@ var bufferPool = sync.Pool{}
 func acquireBuffer() []byte {
 	v := bufferPool.Get()
 	if v == nil {
-		return make([]byte, 128)
+		return make([]byte, 512)
 	}
 	return v.([]byte)
 }
@@ -75,7 +75,6 @@ func (r *ffReader) Pos() int {
 
 // Reset the reader, and add new input.
 func (r *ffReader) Reset(d io.Reader) {
-	r.buffer = r.buffer[:0]
 	r.head = 0
 	r.reader = d
 	r.tail = 0
@@ -102,11 +101,11 @@ func (r *ffReader) PosWithLine() (int, int) {
 }
 
 func (r *ffReader) LoadMore() error {
-	if r.head > 0 {
-		// copy unread data to beginning of buffer.
-		copy(r.buffer, r.buffer[r.head:r.tail])
-		r.tail -= r.head
+	if r.head == r.tail {
 		r.head = 0
+		r.tail = 0
+	} else {
+		return nil
 	}
 
 	n, err := r.reader.Read(r.buffer[r.tail:])
@@ -157,7 +156,13 @@ func (r *ffReader) ReadByteNoWS() (byte, error) {
 		}
 
 		if j >= r.tail {
-			return 0, io.EOF
+			r.head = j
+			err := r.LoadMore()
+			if err != nil {
+				return 0, err
+			}
+
+			j = r.head
 		}
 	}
 }
@@ -282,6 +287,9 @@ func (r *ffReader) SliceString(out DecodingBuffer) error {
 
 		for {
 			if j >= r.tail {
+				out.Write(r.buffer[r.head:j])
+				r.head = j
+
 				err := r.LoadMore()
 				if err != nil {
 					return err
@@ -292,12 +300,12 @@ func (r *ffReader) SliceString(out DecodingBuffer) error {
 
 			c := r.buffer[j]
 			if c == '"' || byteLookupTable[c]&sliceStringMask != 0 {
+				out.Write(r.buffer[r.head:j])
 				j++
 				break
 			}
-			out.Write(r.buffer[j : j+1])
-			j++
 
+			j++
 		}
 
 		r.head = j
